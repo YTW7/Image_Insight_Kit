@@ -5,6 +5,7 @@ import * as mobilenet from "@tensorflow-models/mobilenet";
 import sharp from "sharp";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
+import { logAnalyzedImage } from "@/lib/aws";
 
 interface ClassifyResponse {
   predictions: { className: string; probability: number }[];
@@ -82,6 +83,11 @@ export async function POST(
       predictions = await model.classify(imageTensor, 5); // top 5
     } finally {
       imageTensor.dispose();
+    }
+    try {
+      await logAnalyzedImage(buffer, "upload.jpg", predictions);
+    } catch (s3Err) {
+      console.warn("S3 logging skipped:", s3Err instanceof Error ? s3Err.message : s3Err);
     }
 
     return NextResponse.json({ predictions }, { headers });
